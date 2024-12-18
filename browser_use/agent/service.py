@@ -49,7 +49,7 @@ load_dotenv()
 logger = logging.getLogger(__name__)
 
 T = TypeVar('T', bound=BaseModel)
-
+from prefect import flow, task, get_run_logger
 
 class Agent:
 	def __init__(
@@ -153,8 +153,10 @@ class Agent:
 		self.AgentOutput = AgentOutput.type_with_custom_actions(self.ActionModel)
 
 	@time_execution_async('--step')
+	@task(cache_policy=None)
 	async def step(self, step_info: Optional[AgentStepInfo] = None) -> None:
 		"""Execute one step of the task"""
+		logger = get_run_logger()
 		logger.info(f'\n📍 Step {self.n_steps}')
 		state = None
 		model_output = None
@@ -162,9 +164,13 @@ class Agent:
 
 		try:
 			state = await self.browser_context.get_state(use_vision=self.use_vision)
+			# logger.info(f'📄 State: {state}')
 			self.message_manager.add_state_message(state, self._last_result, step_info)
 			input_messages = self.message_manager.get_messages()
+	
+			# logger.info(f'📄 Input messages: {input_messages}')
 			model_output = await self.get_next_action(input_messages)
+			logger.info(f'📄 Model output: {model_output}')
 			self._save_conversation(input_messages, model_output)
 			self.message_manager._remove_last_state_message()  # we dont want the whole state in the chat history
 			self.message_manager.add_model_output(model_output)
@@ -172,6 +178,7 @@ class Agent:
 			result: list[ActionResult] = await self.controller.multi_act(
 				model_output.action, self.browser_context
 			)
+			logger.info(f'📄 Result: {result}')
 			self._last_result = result
 
 			if len(result) > 0 and result[-1].is_done:
@@ -258,7 +265,7 @@ class Agent:
 
 		structured_llm = self.llm.with_structured_output(self.AgentOutput, include_raw=True)
 		response: dict[str, Any] = await structured_llm.ainvoke(input_messages)  # type: ignore
-
+		logger.info(f'get_next_action Response: {response}')
 		parsed: AgentOutput = response['parsed']
 		# cut the number of actions to max_actions_per_step
 		parsed.action = parsed.action[: self.max_actions_per_step]
@@ -319,8 +326,10 @@ class Agent:
 		f.write(' RESPONSE\n')
 		f.write(json.dumps(json.loads(response.model_dump_json(exclude_unset=True)), indent=2))
 
+	@flow(name='browser-use-run')
 	async def run(self, max_steps: int = 100) -> AgentHistoryList:
 		"""Execute the task with maximum number of steps"""
+		logger = get_run_logger()
 		try:
 			logger.info(f'🚀 Starting task: {self.task}')
 
