@@ -1,4 +1,5 @@
 import base64
+from math import log
 import pytest
 
 from browser_use.browser.browser import Browser, BrowserConfig, BrowserContext
@@ -10,17 +11,18 @@ import logging
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 
+import asyncio
 
-@pytest.fixture
-async def browser():
-	browser_service = Browser(config=BrowserConfig(headless=True))
-	yield browser_service
+# @pytest.fixture
+# async def browser():
+# 	browser_service = Browser(config=BrowserConfig(headless=True))
+# 	yield browser_service
 
-	await browser_service.close()
+# 	await browser_service.close()
 
 
 # @pytest.mark.skip(reason='takes too long')
-@pytest.mark.asyncio
+# @pytest.mark.asyncio
 async def test_take_full_page_screenshot(browser: Browser):
 	# Go to a test page
 	# browser.go_to_url('https://aicrafter.info')
@@ -28,22 +30,21 @@ async def test_take_full_page_screenshot(browser: Browser):
 	try:
 		controller = Controller()
 		action_model = controller.registry.create_action_model()
-		logger.info(f"action_model: {action_model}")
+		# print(f"action_model: {action_model}")
 		action_model.go_to_url = GoToUrlAction(url='https://aicrafter.info')
-		logger.info(f"action_model 2: {action_model}")
+		# print(f"action_model 2: {action_model}")
 		# Log registered actions
-		logger.info("Registered actions:")
+		print("Registered actions:")
 		for action_name in controller.registry.registry.actions:
-			logger.info(f"- {action_name}")
+			print(f"- {action_name}")
 		# # Create the GoToUrlAction
-		# go_to_url_action = GoToUrlAction(url='https://aicrafter.info')
+		go_to_url_action = GoToUrlAction(url='https://aicrafter.info')
 		action_model = ActionModel(
             go_to_url=GoToUrlAction(url='https://aicrafter.info'),
-            # Other actions can remain None
         )
-			
-		result = await controller.act(action_model, browser_context)
-		logger.info(f"Result: {result}")
+		print(f"action_model 3: {action_model}")
+		result = await controller.act(go_to_url_action, browser_context)
+		print(f"Result: {result}")
 		# Take full page screenshot
 		screenshot_b64 = await browser_context.take_screenshot(full_page=True)
 		
@@ -56,7 +57,7 @@ async def test_take_full_page_screenshot(browser: Browser):
 		with open('screenshot.png', 'wb') as f:
 			f.write(base64.b64decode(screenshot_b64))
 	except Exception as e:
-		logger.error(f'Failed to take screenshot: {str(e)}')
+		print(f'Failed to take screenshot: {str(e)}')
 		# pytest.fail(f'Failed to decode base64 screenshot: {str(e)}')
 	finally:
 		# Explicitly close the browser context
@@ -67,4 +68,5 @@ async def test_take_full_page_screenshot(browser: Browser):
 
 
 if __name__ == '__main__':
-	asyncio.run(test_take_full_page_screenshot(Browser(config=BrowserConfig(headless=False))))
+    print('Running test_take_full_page_screenshot()')
+    asyncio.run(test_take_full_page_screenshot(Browser(config=BrowserConfig(headless=False))))

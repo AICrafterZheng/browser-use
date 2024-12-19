@@ -2,7 +2,9 @@ from __future__ import annotations
 
 import asyncio
 import json
+from json import dumps
 import logging
+from math import log
 import os
 import time
 import uuid
@@ -15,6 +17,7 @@ from langchain_core.messages import (
 	BaseMessage,
 	SystemMessage,
 )
+from langchain_core.utils import image
 from openai import RateLimitError
 from pydantic import BaseModel, ValidationError
 
@@ -152,6 +155,37 @@ class Agent:
 		# Create output model with the dynamic actions
 		self.AgentOutput = AgentOutput.type_with_custom_actions(self.ActionModel)
 
+
+	def _print_input_messages(self, input_messages: list[BaseMessage], logger) -> None:
+		"""Print input messages"""
+		input_messages_dicts = []
+		for message in input_messages:
+			message_dict = message.__dict__.copy()  # Create a copy to avoid modifying the original
+			# Handle nested content for messages with complex structures
+			if 'content' in message_dict and isinstance(message_dict['content'], list):
+				filtered_content = []
+				for content_item in message_dict['content']:
+					if isinstance(content_item, dict):
+						content_item_copy = content_item.copy()
+						image_url = content_item_copy.get('image_url', {}).copy()
+						if len(image_url.get('url', "")) > 100:
+							image_url['url'] = image_url.get('url', "")[:100] + '...'
+						content_item_copy['image_url'] = image_url
+						filtered_content.append(content_item_copy)
+					else:
+						filtered_content.append(content_item)
+				message_dict['content'] = filtered_content
+			input_messages_dicts.append(message_dict)
+		# print input_messages_dicts in indented format
+		logger.info(f'📄 Input messages:\n{dumps(input_messages_dicts, indent=4)}')
+
+	def _print_state(self, state: BrowserState, logger) -> None:
+		"""Print state"""
+		state_dict = state.__dict__.copy()
+		# remove the screenshot from the state
+		state_dict["screenshot"] = state_dict.get('screenshot')[:100] + '...'
+		logger.info(f'📄 State: {state_dict}')
+
 	@time_execution_async('--step')
 	@task(cache_policy=None)
 	async def step(self, step_info: Optional[AgentStepInfo] = None) -> None:
@@ -164,11 +198,10 @@ class Agent:
 
 		try:
 			state = await self.browser_context.get_state(use_vision=self.use_vision)
-			# logger.info(f'📄 State: {state}')
+			self._print_state(state, logger)
 			self.message_manager.add_state_message(state, self._last_result, step_info)
 			input_messages = self.message_manager.get_messages()
-	
-			# logger.info(f'📄 Input messages: {input_messages}')
+			self._print_input_messages(input_messages, logger)
 			model_output = await self.get_next_action(input_messages)
 			logger.info(f'📄 Model output: {model_output}')
 			self._save_conversation(input_messages, model_output)

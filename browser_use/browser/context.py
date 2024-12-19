@@ -173,7 +173,7 @@ class BrowserContext:
 
 		context = await self._create_context(playwright_browser)
 		page = await context.new_page()
-
+		logger.info(f'Danny Opened new page: {page.url}')
 		# Instead of calling _update_state(), create an empty initial state
 		initial_state = BrowserState(
 			element_tree=DOMElementNode(

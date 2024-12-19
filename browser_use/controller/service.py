@@ -513,6 +513,7 @@ class Controller:
 	@time_execution_sync('--act')
 	async def act(self, action: ActionModel, browser_context: BrowserContext) -> ActionResult:
 		"""Execute an action"""
+		print("action: ", action)
 		try:
 			for action_name, params in action.model_dump(exclude_unset=True).items():
 				if params is not None:

@@ -12,11 +12,14 @@ async def main():
         azure_endpoint=os.getenv("AZURE_OPENAI_API_BASE", ""),
         api_key=os.getenv("AZURE_OPENAI_API_KEY_GPT_4o", ""),
     )
-    task = "Please go to https://aicrafter.info/ to search 'cuda' in the 'Search articles' box"
-    task = 'Please go to https://www.wsj.com/articles/amazon-announces-supercomputer-new-server-powered-by-homegrown-ai-chips-18c196fc, and extract the text. If you see captcha please solve it'
-    task = "Please go to https://aicrafter.info/news/1810, and take a screenshot of the page, then save the screenshot to a file"
+    # task = "Please go to https://aicrafter.info/ to search 'cuda' in the 'Search articles' box"
+    # task = 'Please go to https://www.wsj.com/articles/amazon-announces-supercomputer-new-server-powered-by-homegrown-ai-chips-18c196fc, and extract the text. If you see captcha please solve it'
+    # task = "Please go to https://aicrafter.info/news/1810, and take a screenshot of the page, then save the screenshot to a file"
     task = "Please go to https://aicrafter.info/"
-    task += ", and check if the subscribe button is clickable"
+    # task += ", click on the subscribe button"
+    # task += ", input email address 'test@gmail.com'"
+    # task += ", click on the 'Subscribe Now' button"
+    task += ", click on the dark mode button"
     agent = Agent(
         task=task,
         llm=llm,
